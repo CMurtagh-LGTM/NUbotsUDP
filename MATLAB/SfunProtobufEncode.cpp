@@ -4,6 +4,7 @@
 
 #include "Vector.pb.h"
 #include <string>
+#include <iostream>
 
 static void mdlInitializeSizes(SimStruct *S)
 {
@@ -54,6 +55,8 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     InputRealPtrsType inputs = ssGetInputPortRealSignalPtrs(S,0);
     
     vec16 protobufobj;
+    
+    std::cout << inputs[0][15] << std::endl;
 
     protobufobj.set_s0(inputs[0][0]);
     protobufobj.set_s1(inputs[0][1]);
@@ -75,10 +78,14 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     std::string buffer = std::string();
     protobufobj.SerializeToString(&buffer);
     
+    std::cout << "Output: " << buffer << std::endl;
+    
     ssSetOutputPortWidth(S,0,buffer.length());
     ssSetCurrentOutputPortDimensions(S,0,0,buffer.length());
     
-    std::string *output = (std::string*)ssGetOutputPortSignal(S,0);
+    uint8_T *output = (uint8_T*)ssGetOutputPortSignal(S,0);
+    
+    //std::string *output = (std::string*)ssGetOutputPortSignal(S,0);
     
     //protobufobj.SerializeToString(output);
     
