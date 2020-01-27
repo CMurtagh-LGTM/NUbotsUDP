@@ -19,13 +19,19 @@ static void mdlInitializeSizes(SimStruct *S)
     }
     
     //ssSetInputPortWidth(S,0,DYNAMICALLY_SIZED);
-    ssSetInputPortWidth(S,0,1);
+    //ssSetInputPortDimensionInfo(S, 0, DYNAMIC_DIMENSION);
+    ssSetInputPortWidth(S,0,256);
     ssSetInputPortDirectFeedThrough(S, 0, 1);
+    ssSetInputPortDataType(S, 0, SS_UINT8);
+    //ssSetInputPortDimensionsMode(S, 0, VARIABLE_DIMS_MODE);
 
     if (!ssSetNumOutputPorts(S,1)) return;
     ssSetOutputPortWidth(S, 0, 16);
     
     ssSetNumSampleTimes(S, 1);
+    
+    /* specify the sim state compliance to be same as a built-in block */
+    ssSetOperatingPointCompliance(S, USE_DEFAULT_OPERATING_POINT);
 
     ssSetOptions(S, SS_OPTION_EXCEPTION_FREE_CODE);
 }
@@ -37,61 +43,58 @@ static void mdlInitializeSampleTimes(SimStruct *S)
 }
 
 /*#if defined(MATLAB_MEX_FILE)
-#define MDL_SET_INPUT_PORT_DIMENSION_INFO
-void mdlSetInputPortDimensionInfo(SimStruct *S, int_T port, const DimsInfo_T *dimsInfo)
+#define MDL_SET_INPUT_PORT_WIDTH
+static void mdlSetInputPortWidth(SimStruct *S, int_T port, int_T width)
 {
-    if(!ssSetInputPortDimensionInfo(S, port, dimsInfo)) return;
+    ssSetInputPortWidth(S, port, width);
 }
 
-#define MDL_SET_OUTPUT_PORT_DIMENSION_INFO
-void mdlSetOutputPortDimensionInfo(SimStruct *S, int_T port, const DimsInfo_T *dimsInfo)
-{
-    DimsInfo_T outputDimsInfo;
-    int_T dims[1];
-    dims[0] = 16;
-
-    outputDimsInfo.numDims = 1;
-    outputDimsInfo.dims = dims;
-    outputDimsInfo.width = 16;
-    
-    ssSetOutputPortDimensionInfo(S, port, &outputDimsInfo);
+# define MDL_SET_OUTPUT_PORT_WIDTH
+static void mdlSetOutputPortWidth(SimStruct *S, int_T port, int_T width)
+{   
+    UNUSED_ARG(S);
+    UNUSED_ARG(port);
+    UNUSED_ARG(width);
+    return;
 }
 
-#define MDL_SET_DEFAULT_PORT_DIMENSION_INFO
-void mdlSetDefaultPortDimensionInfo(SimStruct *S)
+#define MDL_SET_DEFAULT_PORT_WIDTH_INFO
+static void mdlSetDefaultPortDimensionInfo(SimStruct *S)
 {
-    DimsInfo_T inputDimsInfo;
+        DimsInfo_T inputDimsInfo;
     int_T dimsi[1];
     dimsi[0] = 256;
-
     inputDimsInfo.numDims = 1;
     inputDimsInfo.dims = dimsi;
     inputDimsInfo.width = 256;
     
     mdlSetInputPortDimensionInfo(S, 0, &inputDimsInfo);
     
-    DimsInfo_T outputDimsInfo;
-    int_T dimso[1];
-    dimso[0] = 16;
-
-    outputDimsInfo.numDims = 1;
-    outputDimsInfo.dims = dimso;
-    outputDimsInfo.width = 16;
+    if (ssGetOutputPortWidth(S, 0) == DYNAMICALLY_SIZED) 
+    {
+        DimsInfo_T outputDimsInfo;
+        int_T dimso[1];
+        dimso[0] = 16;
+        outputDimsInfo.numDims = 1;
+        outputDimsInfo.dims = dimso;
+        outputDimsInfo.width = 16;
     
-    ssSetOutputPortDimensionInfo(S, 0, &outputDimsInfo);
+        ssSetOutputPortDimensionInfo(S, 0, &outputDimsInfo);
+    }
 }
 #endif*/
 
 static void mdlOutputs(SimStruct *S, int_T tid)
 {
-    /*uint8_T *input = (uint8_T *)ssGetInputPortSignalPtrs(S,0);
+    InputUInt8PtrsType input = (InputUInt8PtrsType)ssGetInputPortSignalPtrs(S,0);
+    int_T iwidth = ssGetInputPortWidth(S,0);
     
-    std::string buffer = std::string(*input,*input + ssGetCurrentInputPortWidth(S,0));*/
+    std::string buffer = std::string(*input,*input + iwidth);
     
-    std::string *buffer = (std::string *)ssGetInputPortSignalPtrs(S,0);
+    //std::string *buffer = (std::string *)ssGetInputPortSignalPtrs(S,0);
     
     vec16 protobufobj;
-    protobufobj.ParseFromString(*buffer);
+    protobufobj.ParseFromString(buffer);
     
     real_T *output = ssGetOutputPortRealSignal(S,0);
     
@@ -117,6 +120,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 
 static void mdlTerminate(SimStruct *S)
 {
+    UNUSED_ARG(S);
 }
 
 #ifdef MATLAB_MEX_FILE    /* Is this file being compiled as a 
